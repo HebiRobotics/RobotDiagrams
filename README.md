@@ -17,12 +17,16 @@ Base (fixed attachment to the world):
 base
 
 Link
+```
 link <length> <theta>
 link <length> <theta> <label>
+```
 
 Link with base and output frame shown, and theta from previous joint:
+```
 link_frames <length> <theta>
 link_frames <length> <theta> <label>
+```
 
 Rotary Joint
 rjoint
@@ -36,7 +40,9 @@ effector
 # Building
 
 To compile and run the example programs, type
+```
 g++ <program name> -o <executable name>
+```
 
 # TODOS
 
