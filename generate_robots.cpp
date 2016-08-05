@@ -14,28 +14,60 @@ std::vector<std::string> split(std::string s)
   std::istream_iterator<std::string> end;
   std::vector<std::string> vstrings(begin, end);
   std::copy(vstrings.begin(), vstrings.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+  return vstrings;
 }
 
-bool add_element(rob_diag::Robot, std::string line)
+// TODO: delete copy constructor of robot!
+bool add_element(rob_diag::Robot& robot, std::string line)
 {
+  std::cout << "adding element" << std::endl;
+  // TODO: do float parsing better...std::stof is only C++11...std::strtod sucks for error conditions.
   try
   {
     std::vector<std::string> words = split(line);
+    if (words.size() == 0)
+    {
+      std::cerr << "No arguments on line!" << std::endl;
+      return false;
+    }
+    std::cout << "size of words " << words.size() << std::endl;
     if (words[0] == "base")
     {
       if (words.size() == 1)
       {
         rob_diag::RobotElement* base = (rob_diag::RobotElement*)new rob_diag::Base();
+        robot.elements_.push_back(base);
+        return true;
       }
       else if (words.size() == 2)
       {
-        // TODO: do this better...std::stof is only C++11...
         double width = std::strtod (words[1].c_str(), NULL);
         rob_diag::RobotElement* base = (rob_diag::RobotElement*)new rob_diag::Base(width);
+        robot.elements_.push_back(base);
+        return true;
       }
+      std::cerr << "Invalid arguments for " << words[0] << std::endl;
+      return false;
     }
     else if (words[0] == "link")
     {
+      if (words.size() == 2)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Link(length);
+        robot.elements_.push_back(link);
+        return true;
+      }
+      else if (words.size() == 3)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        double theta = std::strtod (words[2].c_str(), NULL);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Link(length, theta);
+        robot.elements_.push_back(link);
+        return true;
+      }
+      std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
+      return false;
     }
     else if (words[0] == "link_frames")
     {
@@ -44,7 +76,13 @@ bool add_element(rob_diag::Robot, std::string line)
     }
     else if (words[0] == "rjoint")
     {
-      std::cerr << words[0] << " not yet supported!" << std::endl;
+      if (words.size() == 1)
+      {
+        rob_diag::RobotElement* rjoint = (rob_diag::RobotElement*)new rob_diag::RJoint();
+        robot.elements_.push_back(rjoint);
+        return true;
+      }
+      std::cerr << "Invalid arguments for " << words[0] << std::endl;
       return false;
     }
     else if (words[0] == "pjoint")
@@ -68,15 +106,28 @@ bool add_element(rob_diag::Robot, std::string line)
     return false;
   }
   
-  return true;
+  return false;
 }
 
-void draw_robot(rob_diag::Robot robot, std::string filename)
+void draw_robot(rob_diag::Robot& robot, std::string filename)
 {
-  // TODO!
+  // Compute dimensions
+  rob_diag::Rect bounds = robot.compute_dimensions();
+  double width = bounds.right_ - bounds.left_;
+  double height = bounds.top_ - bounds.bottom_;
+  double margin = 10;
+  svg::Dimensions dimensions(width + margin * 2.0, height + margin * 2.0);
+
+  // Draw to file:
+  Document doc(filename, svg::Layout(dimensions, svg::Layout::BottomLeft));
+  rob_diag::Pose origin(-bounds.left_ + margin, -bounds.bottom_ + margin, 0);
+  robot.draw_at(doc, origin);
+
+  // Save and quit
+  doc.save();
 }
 
-void delete_robot(rob_diag::Robot robot)
+void delete_robot(rob_diag::Robot& robot)
 {
   // TODO: move to a destructor? Don't store pointers?
   for (int i = 0; i < robot.elements_.size(); ++i)
@@ -106,14 +157,14 @@ bool draw_robot(const char* filename)
       if (!add_element(robot, line))
       {
         std::cerr << "Bad configuration line for " << filename << ":" << std::endl << line << std::endl;
-        delete_robot(robot);
         robot_config.close();
+        delete_robot(robot);
         return false;
       }
     }
-    delete_robot(robot);
     robot_config.close();
     draw_robot(robot, file_base + ".svg");
+    delete_robot(robot);
     return true;
   }
   else
@@ -141,7 +192,7 @@ int main(int argc, char** argv)
     if (draw_robot(argv[i]))
     {
       ++num_good;
-      std::cout << "  " << argv[i] << ": success" << std::endl;
+      std::cout << argv[i] << ": success" << std::endl;
     }
     // NOTE: error from failure will be displayed in the 'draw_robot' function.
   }

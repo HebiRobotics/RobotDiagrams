@@ -20,12 +20,14 @@ base <specific width>
 
 Link
 ```
+link <length>
 link <length> <theta>
 link <length> <theta> <label>
 ```
 
 Link with base and output frame shown, and theta from previous joint:
 ```
+link_frames <length>
 link_frames <length> <theta>
 link_frames <length> <theta> <label>
 ```
