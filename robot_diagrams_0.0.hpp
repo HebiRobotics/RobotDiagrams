@@ -116,7 +116,7 @@ public:
 class Base : public RobotElement
 {
 public:
-  Base(double width = 20, double default_theta = 0)
+  Base(double width = 10, double default_theta = 0)
     : width_(width), default_theta_(default_theta)
   {}
   virtual void measure(const Pose& start, Pose& end, Rect& bounds)
@@ -170,6 +170,55 @@ public:
     }
   }
   virtual ~Base() {};
+  double width_, default_theta_;
+};
+
+class EndEffector : public RobotElement
+{
+public:
+  EndEffector(double width = 10, double default_theta = 0)
+    : width_(width), default_theta_(default_theta)
+  {}
+  virtual void measure(const Pose& start, Pose& end, Rect& bounds)
+  {
+    double theta = start.theta_ + default_theta_;
+    double w_x = -std::sin(theta) * width_;
+    double w_y = std::cos(theta) * width_;
+    double h_x = std::cos(theta) * width_;
+    double h_y = std::sin(theta) * width_;
+    double left = std::min(-w_x, h_x);
+    double right = std::max(w_x, h_x);
+    double top = std::max(w_y, h_y);
+    double bottom = std::min(-w_y, h_y);
+
+    end = start;
+    end.theta_ += default_theta_;
+    bounds.left_ = start.x_ + left;
+    bounds.right_ = start.x_ + right;
+    bounds.top_ = start.y_ + top;
+    bounds.bottom_ = start.y_ + bottom;
+  }
+  virtual void draw_at(Document& doc, const Pose& start, Pose& end)
+  {
+    double theta = start.theta_ + default_theta_;
+    double w_x = -std::sin(theta) * width_;
+    double w_y = std::cos(theta) * width_;
+    double h_x = std::cos(theta) * width_;
+    double h_y = std::sin(theta) * width_;
+
+    end = start;
+    end.theta_ += default_theta_;
+    // Horizontal "ground"
+    Point p1(start.x_ - w_x, start.y_ - w_y);
+    Point p2(start.x_ + w_x, start.y_ + w_y);
+    Point p1_e(start.x_ - w_x + h_x, start.y_ - w_y + h_y);
+    Point p2_e(start.x_ + w_x + h_x, start.y_ + w_y + h_y);
+    Stroke s(0.5, Color::Black);
+    doc << Line(p1, p2, s)
+        << Line(p1, p1_e, s)
+        << Line(p2, p2_e, s);
+  }
+  virtual ~EndEffector() {};
   double width_, default_theta_;
 };
 

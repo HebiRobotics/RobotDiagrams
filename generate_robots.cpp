@@ -92,7 +92,13 @@ bool add_element(rob_diag::Robot& robot, std::string line)
     }
     else if (words[0] == "effector")
     {
-      std::cerr << words[0] << " not yet supported!" << std::endl;
+      if (words.size() == 1)
+      {
+        rob_diag::RobotElement* ee = (rob_diag::RobotElement*)new rob_diag::EndEffector();
+        robot.elements_.push_back(ee);
+        return true;
+      }
+      std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
       return false;
     }
     else
