@@ -7,14 +7,16 @@ transparancy)
 
 The example programs are as follows:
 * draw_rr_robot.cpp - draws a simple RR robot.
-* generate_robots.cpp - searches for all files in a given directory with an extension of '.robot' and generates a '.svg'
-of each one in that directory.  The first and only parameter is the directory.
+* generate_robots.cpp - converts all file arguments with an extension of '.robot' to '.svg' format.
 
 # Config file
-For generate_robots.cpp, the text format is a series of lines, each which is one of the following.
+For generate_robots.cpp, the text format for the .robot files is a series of lines, each which is one of the following.
 
 Base (fixed attachment to the world):
+```
 base
+base <specific width>
+```
 
 Link
 ```
@@ -29,13 +31,19 @@ link_frames <length> <theta> <label>
 ```
 
 Rotary Joint
+```
 rjoint
+```
 
 Prismatic Joint
+```
 pjoint
+```
 
 End Effector
+```
 effector
+```
 
 # Building
 

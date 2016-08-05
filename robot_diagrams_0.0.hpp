@@ -50,6 +50,7 @@ public:
   virtual void measure(const Pose& start, Pose& end, Rect& bounds) = 0;
   // Draws the link and computes the output pose given a starting pose
   virtual void draw_at(Document& doc, const Pose& start, Pose& end) = 0;
+  virtual ~RobotElement() {};
 };
 
 class Link : public RobotElement
@@ -82,6 +83,7 @@ public:
     end.x_ = start.x_ + x_offset;
     end.y_ = start.y_ + y_offset;
   }
+  virtual ~Link() {};
   double length_, default_theta_;
 };
 
@@ -107,6 +109,7 @@ public:
     end.y_ = start.y_;
     doc << Circle(svg::Point(start.x_, start.y_), radius_ * 2, Fill(Color::Transparent), Stroke(0.5, Color::Black));
   }
+  virtual ~RJoint() {};
   double radius_, default_theta_;
 };
 
@@ -166,6 +169,7 @@ public:
       doc << Line(p1_tmp, p2_tmp, s);
     }
   }
+  virtual ~Base() {};
   double width_, default_theta_;
 };
 
