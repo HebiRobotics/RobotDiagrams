@@ -109,7 +109,11 @@ namespace svg
         double y;
         Point operator+(const Point& rhs) const
         {
-            return Point(rhs.x+x, rhs.y+y);
+            return Point(x + rhs.x, y + rhs.y);
+        }
+        Point operator-(const Point& rhs) const
+        {
+            return Point(x - rhs.x, y - rhs.y);
         }
         Point operator*(double rhs) const
         {

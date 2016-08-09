@@ -1,5 +1,5 @@
 base
-rjoint
-link 40 1.5
-rjoint
-link 60 0.35
+rjoint 1.5
+link 40
+rjoint 0.35
+link 60

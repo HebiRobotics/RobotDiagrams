@@ -1,8 +1,12 @@
 base
-rjoint
-link 100 0.78
-rjoint
-link 100 0.35
+rjoint 0.78
+frames
+link 100 100
+rjoint 0.35
+frames
+link 100 100
 pjoint
-link 100 0
+frames
+link 100 tmp_3
+frames
 effector

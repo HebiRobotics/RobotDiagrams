@@ -28,11 +28,13 @@ bool add_element(rob_diag::Robot& robot, std::string line)
       std::cerr << "No arguments on line!" << std::endl;
       return false;
     }
-    if (words[0] == "base")
+    if (words[0] == "base" || words[0] == "invisible_base")
     {
       if (words.size() == 1)
       {
         rob_diag::RobotElement* base = (rob_diag::RobotElement*)new rob_diag::Base();
+        if (words[0] == "invisible_base")
+          ((rob_diag::Base*)base)->visible_ = false;
         robot.elements_.push_back(base);
         return true;
       }
@@ -40,6 +42,8 @@ bool add_element(rob_diag::Robot& robot, std::string line)
       {
         double width = std::strtod (words[1].c_str(), NULL);
         rob_diag::RobotElement* base = (rob_diag::RobotElement*)new rob_diag::Base(width);
+        if (words[0] == "invisible_base")
+          ((rob_diag::Base*)base)->visible_ = false;
         robot.elements_.push_back(base);
         return true;
       }
@@ -58,55 +62,46 @@ bool add_element(rob_diag::Robot& robot, std::string line)
       else if (words.size() == 3)
       {
         double length = std::strtod (words[1].c_str(), NULL);
-        double theta = std::strtod (words[2].c_str(), NULL);
-        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Link(length, theta);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Link(length, words[2]);
         robot.elements_.push_back(link);
         return true;
       }
-      else if (words.size() == 4)
-      {
-        double length = std::strtod (words[1].c_str(), NULL);
-        double theta = std::strtod (words[2].c_str(), NULL);
-        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Link(length, theta, words[3]);
-        robot.elements_.push_back(link);
-        return true;
-      }
-      std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
+      std::cerr << "Invalid arguments for " << words[0] << std::endl;
       return false;
     }
-    else if (words[0] == "link_frames")
+    else if (words[0] == "invisible_link")
     {
       if (words.size() == 2)
       {
         double length = std::strtod (words[1].c_str(), NULL);
-        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::LinkWithFrames(length);
+        rob_diag::Link* tmp = new rob_diag::Link(length);
+        tmp->visible_ = false;
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)tmp;
         robot.elements_.push_back(link);
         return true;
       }
-      else if (words.size() == 3)
+      std::cerr << "Invalid arguments for " << words[0] << std::endl;
+      return false;
+    }
+    else if (words[0] == "frames")
+    {
+      if (words.size() == 1)
       {
-        double length = std::strtod (words[1].c_str(), NULL);
-        double theta = std::strtod (words[2].c_str(), NULL);
-        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::LinkWithFrames(length, theta);
-        robot.elements_.push_back(link);
-        return true;
-      }
-      else if (words.size() == 4)
-      {
-        double length = std::strtod (words[1].c_str(), NULL);
-        double theta = std::strtod (words[2].c_str(), NULL);
-        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::LinkWithFrames(length, theta, words[3]);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Frames();
         robot.elements_.push_back(link);
         return true;
       }
       std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
       return false;
     }
-    else if (words[0] == "rjoint")
+    else if (words[0] == "rjoint" || words[0] == "invisible_rjoint")
     {
-      if (words.size() == 1)
+      if (words.size() == 2)
       {
-        rob_diag::RobotElement* rjoint = (rob_diag::RobotElement*)new rob_diag::RJoint();
+        double theta = std::strtod (words[1].c_str(), NULL);
+        rob_diag::RobotElement* rjoint = (rob_diag::RobotElement*)new rob_diag::RJoint(theta);
+        if (words[0] == "invisible_rjoint")
+          ((rob_diag::RJoint*)rjoint)->visible_ = false;
         robot.elements_.push_back(rjoint);
         return true;
       }

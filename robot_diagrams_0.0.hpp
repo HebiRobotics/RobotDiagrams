@@ -85,14 +85,14 @@ protected:
 class Link : public RobotElement
 {
 public:
-  Link(double length, double default_theta = 0, std::string label = "")
-    : length_(length), default_theta_(default_theta), label_(label) 
+  Link(double length, std::string label = "")
+    : length_(length), label_(label), visible_(true)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
     // Note: the points for Link are { start, end }
     points_.clear();
-    end.theta_ = start.theta_ + default_theta_;
+    end = start;
     end.x_ = start.x_ + std::cos(end.theta_) * length_;
     end.y_ = start.y_ + std::sin(end.theta_) * length_;
     points_.push_back(Point(start.x_, start.y_));
@@ -101,35 +101,63 @@ public:
   }
   virtual void draw(Document& doc, const Point& offset)
   {
-    doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Black));
+    if (visible_)
+      doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Black));
+    if (label_.size() > 0)
+      doc << Text(points_[0] * 0.5 + points_[1] * 0.5, label_, Fill(Color::Black));
   }
   virtual ~Link() {};
-  double length_, default_theta_;
+  double length_;
   std::string label_;
+  bool visible_;
 };
-
 // TODO: add label!
 
-class LinkWithFrames : public Link
+class Frames : public RobotElement
 {
 public:
-  LinkWithFrames(double length, double default_theta, std::string label)
-    : Link(length, default_theta, label)
+  Frames()
+    : frame_scale_(25), arrow_len_(4)
   {}
-  LinkWithFrames(double length, double default_theta)
-    : Link(length, default_theta)
-  {}
-  LinkWithFrames(double length)
-    : Link(length)
-  {}
-  // TODO: measure to add frames?
+  virtual Rect measure(const Pose& start, Pose& end)
+  {
+    // Set end frame
+    end = start;
+    // Note: the points for are { center, x axis, x arrowheads, y axis,
+    // y arrowheads}
+    double c = std::cos(end.theta_);
+    double s = std::sin(end.theta_);
+    // X axis:
+    points_.push_back(Point(start.x_, start.y_));
+    Point p_x(points_[0] + Point(c, s) * frame_scale_);
+    points_.push_back(p_x);
+    points_.push_back(p_x + (Point(-c, -s) + Point(-s, c)) * arrow_len_);
+    points_.push_back(p_x + (Point(-c, -s) - Point(-s, c)) * arrow_len_);
+    // Y axis:
+    Point p_y(points_[0] + Point(-s, c) * frame_scale_);
+    points_.push_back(p_y);
+    points_.push_back(p_y + (Point(s, -c) + Point(c, s)) * arrow_len_);
+    points_.push_back(p_y + (Point(s, -c) - Point(c, s)) * arrow_len_);
+    return point_bounds();
+  }
+  virtual void draw(Document& doc, const Point& offset)
+  {
+    doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Red));
+    doc << Line(points_[1] + offset, points_[2] + offset, Stroke(0.5, Color::Red));
+    doc << Line(points_[1] + offset, points_[3] + offset, Stroke(0.5, Color::Red));
+    doc << Line(points_[0] + offset, points_[4] + offset, Stroke(0.5, Color::Blue));
+    doc << Line(points_[4] + offset, points_[5] + offset, Stroke(0.5, Color::Blue));
+    doc << Line(points_[4] + offset, points_[6] + offset, Stroke(0.5, Color::Blue));
+  }
+  double frame_scale_;
+  double arrow_len_;
 };
 
 class RJoint : public RobotElement
 {
 public:
-  RJoint(double radius = 5, double default_theta = 0)
-    : radius_(radius), default_theta_(default_theta)  
+  RJoint(double default_theta = 0, double radius = 5)
+    : radius_(radius), default_theta_(default_theta), visible_(true)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
@@ -142,10 +170,12 @@ public:
   }
   virtual void draw(Document& doc, const Point& offset)
   {
-    doc << Circle(points_[0] + offset, radius_ * 2, Fill(Color::Transparent), Stroke(0.5, Color::Black));
+    if (visible_)
+      doc << Circle(points_[0] + offset, radius_ * 2, Fill(Color::Transparent), Stroke(0.5, Color::Black));
   }
   virtual ~RJoint() {};
   double radius_, default_theta_;
+  bool visible_;
 };
 
 // (x to the right, y up, origin halfway between pts. 1 and 2)
@@ -198,7 +228,7 @@ class Base : public RobotElement
 {
 public:
   Base(double width = 20, double default_theta = 0)
-    : width_(width), default_theta_(default_theta)
+    : width_(width), default_theta_(default_theta), visible_(true)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
@@ -230,6 +260,8 @@ public:
   }
   virtual void draw(Document& doc, const Point& offset)
   {
+    if (!visible_)
+      return;
     Stroke s(0.5, Color::Black);
     // Horizontal "ground"
     doc << Line(points_[0] + offset, points_[1] + offset, s);
@@ -249,6 +281,7 @@ public:
   }
   virtual ~Base() {};
   double width_, default_theta_;
+  bool visible_;
 };
 
 // (x to the right, y up, origin halfway between pts. 1 and 2)

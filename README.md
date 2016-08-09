@@ -16,25 +16,26 @@ Base (fixed attachment to the world):
 ```
 base
 base <specific width>
+invisible_base
+invisible_base <specific width>
 ```
 
 Link
 ```
 link <length>
-link <length> <theta>
-link <length> <theta> <label>
+link <length> <label>
+invisible_link <length>
 ```
 
-Link with base and output frame shown, and theta from previous joint:
+Frames - x/y axis
 ```
-link_frames <length>
-link_frames <length> <theta>
-link_frames <length> <theta> <label>
+frames
 ```
 
 Rotary Joint
 ```
-rjoint
+rjoint <theta>
+invisible_rjoint <theta>
 ```
 
 Prismatic Joint
@@ -56,9 +57,5 @@ g++ <program name> -o <executable name>
 
 # TODOS
 
-* prismatic joint
-* end effector
-* text parser
-* frames
 * scaling factor
 * text labels
