@@ -1,4 +1,4 @@
-base 10
+base
 rjoint
 link 40 1.5
 rjoint

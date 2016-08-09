@@ -29,6 +29,11 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
+/**
+ * Note regarding modifications:
+ * - changed 'transparent' to 'none' to work better with SVG viewers.
+ * - added '+=' and '*=' to simple Point class
+ **/
 
 #ifndef SIMPLE_SVG_HPP
 #define SIMPLE_SVG_HPP
@@ -102,6 +107,14 @@ namespace svg
         Point(double x = 0, double y = 0) : x(x), y(y) { }
         double x;
         double y;
+        Point operator+(const Point& rhs) const
+        {
+            return Point(rhs.x+x, rhs.y+y);
+        }
+        Point operator*(double rhs) const
+        {
+            return Point(x * rhs, y * rhs);
+        }
     };
     optional<Point> getMinPoint(std::vector<Point> const & points)
     {
