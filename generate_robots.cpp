@@ -13,14 +13,12 @@ std::vector<std::string> split(std::string s)
   std::istream_iterator<std::string> begin(ss);
   std::istream_iterator<std::string> end;
   std::vector<std::string> vstrings(begin, end);
-  std::copy(vstrings.begin(), vstrings.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
   return vstrings;
 }
 
 // TODO: delete copy constructor of robot!
 bool add_element(rob_diag::Robot& robot, std::string line)
 {
-  std::cout << "adding element" << std::endl;
   // TODO: do float parsing better...std::stof is only C++11...std::strtod sucks for error conditions.
   try
   {
@@ -30,7 +28,6 @@ bool add_element(rob_diag::Robot& robot, std::string line)
       std::cerr << "No arguments on line!" << std::endl;
       return false;
     }
-    std::cout << "size of words " << words.size() << std::endl;
     if (words[0] == "base")
     {
       if (words.size() == 1)
@@ -66,12 +63,43 @@ bool add_element(rob_diag::Robot& robot, std::string line)
         robot.elements_.push_back(link);
         return true;
       }
+      else if (words.size() == 4)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        double theta = std::strtod (words[2].c_str(), NULL);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Link(length, theta, words[3]);
+        robot.elements_.push_back(link);
+        return true;
+      }
       std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
       return false;
     }
     else if (words[0] == "link_frames")
     {
-      std::cerr << words[0] << " not yet supported!" << std::endl;
+      if (words.size() == 2)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::LinkWithFrames(length);
+        robot.elements_.push_back(link);
+        return true;
+      }
+      else if (words.size() == 3)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        double theta = std::strtod (words[2].c_str(), NULL);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::LinkWithFrames(length, theta);
+        robot.elements_.push_back(link);
+        return true;
+      }
+      else if (words.size() == 4)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        double theta = std::strtod (words[2].c_str(), NULL);
+        rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::LinkWithFrames(length, theta, words[3]);
+        robot.elements_.push_back(link);
+        return true;
+      }
+      std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
       return false;
     }
     else if (words[0] == "rjoint")
@@ -87,7 +115,13 @@ bool add_element(rob_diag::Robot& robot, std::string line)
     }
     else if (words[0] == "pjoint")
     {
-      std::cerr << words[0] << " not yet supported!" << std::endl;
+      if (words.size() == 1)
+      {
+        rob_diag::RobotElement* pjoint = (rob_diag::RobotElement*)new rob_diag::PJoint();
+        robot.elements_.push_back(pjoint);
+        return true;
+      }
+      std::cerr << "Invalid arguments for " << words[0] << std::endl;
       return false;
     }
     else if (words[0] == "effector")
