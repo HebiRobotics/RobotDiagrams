@@ -47,44 +47,82 @@ class RobotElement
 {
 public:
   // Computes the ending pose and a bounding box given a starting pose
-  virtual void measure(const Pose& start, Pose& end, Rect& bounds) = 0;
-  // Draws the link and computes the output pose given a starting pose
-  virtual void draw_at(Document& doc, const Pose& start, Pose& end) = 0;
+  virtual Rect measure(const Pose& start, Pose& end) = 0;
+  // Draws the element given an offset from the measure pass
+  virtual void draw(Document& doc, const Point& offset) = 0;
   virtual ~RobotElement() {};
+protected:
+  // A set of points that are used to draw the given element.  These are
+  // computed during the 'measure' pass, and used for rendering during the
+  // 'draw' pass.
+  std::vector<Point> points_;
+  // Extend the current 'bounds' object to include the (x,y) values of each
+  // point.
+  virtual Rect point_bounds()
+  {
+    if (points_.size() == 0)
+    {
+      std::cerr << "Invalid use of point_bounds!" << std::endl;
+      return Rect();
+    }
+    Rect bounds(points_[0].x, points_[0].y, points_[0].x, points_[0].y);
+    for (unsigned int i = 1; i < points_.size(); ++i)
+    {
+      Point p = points_[i];
+      bounds.left_   = std::min(p.x, bounds.left_);
+      bounds.right_  = std::max(p.x, bounds.right_);
+      bounds.top_    = std::max(p.y, bounds.top_);
+      bounds.bottom_ = std::min(p.y, bounds.bottom_);
+    }
+    return bounds;
+  }
 };
+
+// TODO: could think about ensuring measure pass has been run before calling
+// draw?
+// TODO: debug by drawing bounds? And rotating things?
 
 class Link : public RobotElement
 {
 public:
-  Link(double length, double default_theta = 0)
-    : length_(length), default_theta_(default_theta)  
+  Link(double length, double default_theta = 0, std::string label = "")
+    : length_(length), default_theta_(default_theta), label_(label) 
   {}
-  virtual void measure(const Pose& start, Pose& end, Rect& bounds)
+  virtual Rect measure(const Pose& start, Pose& end)
   {
-    double x_offset = std::cos(start.theta_ + default_theta_) * length_;
-    double y_offset = std::sin(start.theta_ + default_theta_) * length_;
+    // Note: the points for Link are { start, end }
+    points_.clear();
     end.theta_ = start.theta_ + default_theta_;
-    end.x_ = start.x_ + x_offset;
-    end.y_ = start.y_ + y_offset;
-    bounds.left_ = std::min(start.x_, end.x_);
-    bounds.right_ = std::max(start.x_, end.x_);
-    bounds.top_ = std::max(start.y_, end.y_);
-    bounds.bottom_ = std::min(start.y_, end.y_);
+    end.x_ = start.x_ + std::cos(end.theta_) * length_;
+    end.y_ = start.y_ + std::sin(end.theta_) * length_;
+    points_.push_back(Point(start.x_, start.y_));
+    points_.push_back(Point(end.x_, end.y_));
+    return point_bounds();
   }
-  virtual void draw_at(Document& doc, const Pose& start, Pose& end)
+  virtual void draw(Document& doc, const Point& offset)
   {
-    double x_offset = std::cos(start.theta_ + default_theta_) * length_;
-    double y_offset = std::sin(start.theta_ + default_theta_) * length_;
-    Point p1(start.x_, start.y_);
-    Point p2(start.x_ + x_offset, start.y_ + y_offset);
-    Stroke s(0.5, Color::Black);
-    doc << Line(p1, p2, s);
-    end.theta_ = start.theta_ + default_theta_;
-    end.x_ = start.x_ + x_offset;
-    end.y_ = start.y_ + y_offset;
+    doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Black));
   }
   virtual ~Link() {};
   double length_, default_theta_;
+  std::string label_;
+};
+
+// TODO: add label!
+
+class LinkWithFrames : public Link
+{
+public:
+  LinkWithFrames(double length, double default_theta, std::string label)
+    : Link(length, default_theta, label)
+  {}
+  LinkWithFrames(double length, double default_theta)
+    : Link(length, default_theta)
+  {}
+  LinkWithFrames(double length)
+    : Link(length)
+  {}
+  // TODO: measure to add frames?
 };
 
 class RJoint : public RobotElement
@@ -93,66 +131,108 @@ public:
   RJoint(double radius = 5, double default_theta = 0)
     : radius_(radius), default_theta_(default_theta)  
   {}
-  virtual void measure(const Pose& start, Pose& end, Rect& bounds)
+  virtual Rect measure(const Pose& start, Pose& end)
   {
+    // Note: the points for RJoint are { center }
     end = start;
     end.theta_ += default_theta_;
-    bounds.left_ = start.x_ - radius_;
-    bounds.right_ = start.x_ + radius_;
-    bounds.top_ = start.y_ + radius_;
-    bounds.bottom_ = start.y_ - radius_;
+    points_.push_back(Point(start.x_, start.y_));
+    return Rect(start.x_ - radius_, start.y_ + radius_,
+                start.x_ + radius_, start.y_ - radius_);
   }
-  virtual void draw_at(Document& doc, const Pose& start, Pose& end)
+  virtual void draw(Document& doc, const Point& offset)
   {
-    end.theta_ = start.theta_ + default_theta_;
-    end.x_ = start.x_;
-    end.y_ = start.y_;
-    doc << Circle(svg::Point(start.x_, start.y_), radius_ * 2, Fill(Color::Transparent), Stroke(0.5, Color::Black));
+    doc << Circle(points_[0] + offset, radius_ * 2, Fill(Color::Transparent), Stroke(0.5, Color::Black));
   }
   virtual ~RJoint() {};
   double radius_, default_theta_;
 };
 
+// (x to the right, y up, origin halfway between pts. 1 and 2)
+//
+// 1_______0
+//  |
+//  |  4------5
+// 2|______3
+//
+// width is distance from 1 to 2.
+// length is distance from 5 to midpoint of edge 1-2.
+class PJoint : public RobotElement
+{
+public:
+  PJoint()
+    : width_(10), length_(30)
+  {}
+  virtual Rect measure(const Pose& start, Pose& end)
+  {
+    // Note: the points for PJoint are labeled in the above diagram
+    points_.clear();
+    end.theta_ = start.theta_;
+    double l_x = std::cos(end.theta_) * length_;
+    double l_y = std::sin(end.theta_) * length_;
+    double w_x = std::sin(end.theta_) * width_ * 0.5;
+    double w_y = -std::cos(end.theta_) * width_ * 0.5;
+    end.x_ = start.x_ + l_x;
+    end.y_ = start.y_ + l_y;
+    points_.push_back(Point(start.x_ - w_x + l_x * 2.0 / 3.0, start.y_ - w_y + l_y * 2.0 / 3.0));
+    points_.push_back(Point(start.x_ - w_x, start.y_ - w_y));
+    points_.push_back(Point(start.x_ + w_x, start.y_ + w_y));
+    points_.push_back(Point(start.x_ + w_x + l_x * 2.0 / 3.0, start.y_ + w_y + l_y * 2.0 / 3.0));
+    points_.push_back(Point(start.x_ + l_x / 3.0, start.y_ + l_y / 3.0));
+    points_.push_back(Point(end.x_, end.y_));
+    return point_bounds();
+  }
+  virtual void draw(Document& doc, const Point& offset)
+  {
+    Stroke s(0.5, Color::Black);
+    doc << Line(points_[0] + offset, points_[1] + offset, s)
+        << Line(points_[1] + offset, points_[2] + offset, s)
+        << Line(points_[2] + offset, points_[3] + offset, s)
+        << Line(points_[4] + offset, points_[5] + offset, s);
+  }
+  virtual ~PJoint() {};
+  double width_, length_;
+};
+
 class Base : public RobotElement
 {
 public:
-  Base(double width = 10, double default_theta = 0)
+  Base(double width = 20, double default_theta = 0)
     : width_(width), default_theta_(default_theta)
   {}
-  virtual void measure(const Pose& start, Pose& end, Rect& bounds)
+  virtual Rect measure(const Pose& start, Pose& end)
   {
+    // Start/end at same point:
+    end = start;
+    end.theta_ += default_theta_;
+
+    // Points: { left of ground, right of ground, bottom left of "fixed" lines,
+    // end of "fixed" lines }
+    points_.clear();
     double theta = start.theta_ + default_theta_;
-    double w_x = std::cos(theta) * width_;
-    double w_y = std::sin(theta) * width_;
-    double h_x = std::sin(theta) * width_ * 0.5;
-    double h_y = -std::cos(theta) * width_ * 0.5;
+    double w_x = std::cos(theta) * width_ * 0.5;
+    double w_y = std::sin(theta) * width_ * 0.5;
+    double h_x = std::sin(theta) * width_ * 0.25;
+    double h_y = -std::cos(theta) * width_ * 0.25;
     double left = std::min(-w_x, h_x);
     double right = std::max(w_x, h_x);
     double top = std::max(w_y, h_y);
     double bottom = std::min(-w_y, h_y);
-
-    end = start;
-    end.theta_ += default_theta_;
-    bounds.left_ = start.x_ + left;
-    bounds.right_ = start.x_ + right;
-    bounds.top_ = start.y_ + top;
-    bounds.bottom_ = start.y_ + bottom;
-  }
-  virtual void draw_at(Document& doc, const Pose& start, Pose& end)
-  {
-    double theta = start.theta_ + default_theta_;
-    double w_x = std::cos(theta) * width_;
-    double w_y = std::sin(theta) * width_;
-    double h_x = std::sin(theta) * width_ * 0.5;
-    double h_y = -std::cos(theta) * width_ * 0.5;
-
-    end = start;
-    end.theta_ += default_theta_;
     // Horizontal "ground"
-    Point p1(start.x_ - w_x, start.y_ - w_y);
-    Point p2(start.x_ + w_x, start.y_ + w_y);
+    points_.push_back(Point(start.x_ - w_x, start.y_ - w_y));
+    points_.push_back(Point(start.x_ + w_x, start.y_ + w_y));
+    // Slanted "fixed" lines
+    points_.push_back(Point(start.x_ - w_x + h_x, start.y_ - w_y + h_y));
+    points_.push_back(Point(start.x_ + w_x + h_x, start.y_ + w_y + h_y));
+
+    // Compute bounds
+    return point_bounds();
+  }
+  virtual void draw(Document& doc, const Point& offset)
+  {
     Stroke s(0.5, Color::Black);
-    doc << Line(p1, p2, s);
+    // Horizontal "ground"
+    doc << Line(points_[0] + offset, points_[1] + offset, s);
     // Slanted "fixed" lines
     int total_lines = 5;
     for (int i = 0; i < total_lines; ++i)
@@ -161,62 +241,55 @@ public:
       // line
       double frac_top = ((double)i + 1) / (((double)total_lines) + 0.5);
       double frac_bot = ((double)i) / (((double)total_lines) + 0.5);
-      frac_top = frac_top * 2 - 1;
-      frac_bot = frac_bot * 2 - 1;
-      Point p1_tmp(start.x_ + w_x * frac_top, start.y_ + w_y * frac_top);
-      Point p2_tmp(start.x_ + w_x * frac_bot + h_x, start.y_ + w_y * frac_bot + h_y);
-      Stroke s(0.5, Color::Black);
-      doc << Line(p1_tmp, p2_tmp, s);
+      doc << Line(
+        points_[0] * frac_top + points_[1] * (1 - frac_top) + offset,
+        points_[2] * frac_bot + points_[3] * (1 - frac_bot) + offset,
+        s);
     }
   }
   virtual ~Base() {};
   double width_, default_theta_;
 };
 
+// (x to the right, y up, origin halfway between pts. 1 and 2)
+//
+// 1____0
+//  |
+//  |  
+// 2|___3
+//
+// width is distance from 1 to 2.
+// length is distance from 1 to 0 or 2 to 3; set as 0.5 * width.
 class EndEffector : public RobotElement
 {
 public:
-  EndEffector(double width = 10, double default_theta = 0)
+  EndEffector(double width = 20, double default_theta = 0)
     : width_(width), default_theta_(default_theta)
   {}
-  virtual void measure(const Pose& start, Pose& end, Rect& bounds)
+  virtual Rect measure(const Pose& start, Pose& end)
   {
-    double theta = start.theta_ + default_theta_;
-    double w_x = -std::sin(theta) * width_;
-    double w_y = std::cos(theta) * width_;
-    double h_x = std::cos(theta) * width_;
-    double h_y = std::sin(theta) * width_;
-    double left = std::min(-w_x, h_x);
-    double right = std::max(w_x, h_x);
-    double top = std::max(w_y, h_y);
-    double bottom = std::min(-w_y, h_y);
-
     end = start;
     end.theta_ += default_theta_;
-    bounds.left_ = start.x_ + left;
-    bounds.right_ = start.x_ + right;
-    bounds.top_ = start.y_ + top;
-    bounds.bottom_ = start.y_ + bottom;
+
+    // Note: the points for PJoint are labeled in the above diagram
+    points_.clear();
+    double theta = start.theta_ + default_theta_;
+    double w_x = std::sin(end.theta_) * width_ * 0.5;
+    double w_y = -std::cos(end.theta_) * width_ * 0.5;
+    double l_x = std::cos(end.theta_) * width_ * 0.5;
+    double l_y = std::sin(end.theta_) * width_ * 0.5;
+    points_.push_back(Point(start.x_ - w_x + l_x, start.y_ - w_y + l_y));
+    points_.push_back(Point(start.x_ - w_x, start.y_ - w_y));
+    points_.push_back(Point(start.x_ + w_x, start.y_ + w_y));
+    points_.push_back(Point(start.x_ + w_x + l_x, start.y_ + w_y + l_y));
+    return point_bounds();
   }
-  virtual void draw_at(Document& doc, const Pose& start, Pose& end)
+  virtual void draw(Document& doc, const Point& offset)
   {
-    double theta = start.theta_ + default_theta_;
-    double w_x = -std::sin(theta) * width_;
-    double w_y = std::cos(theta) * width_;
-    double h_x = std::cos(theta) * width_;
-    double h_y = std::sin(theta) * width_;
-
-    end = start;
-    end.theta_ += default_theta_;
-    // Horizontal "ground"
-    Point p1(start.x_ - w_x, start.y_ - w_y);
-    Point p2(start.x_ + w_x, start.y_ + w_y);
-    Point p1_e(start.x_ - w_x + h_x, start.y_ - w_y + h_y);
-    Point p2_e(start.x_ + w_x + h_x, start.y_ + w_y + h_y);
     Stroke s(0.5, Color::Black);
-    doc << Line(p1, p2, s)
-        << Line(p1, p1_e, s)
-        << Line(p2, p2_e, s);
+    doc << Line(points_[0] + offset, points_[1] + offset, s)
+        << Line(points_[1] + offset, points_[2] + offset, s)
+        << Line(points_[2] + offset, points_[3] + offset, s);
   }
   virtual ~EndEffector() {};
   double width_, default_theta_;
@@ -235,23 +308,18 @@ public:
     Rect bounds;
     for (int i = 0; i < elements_.size(); i++)
     {
-      Rect tmp_bounds;
       Pose out(0,0,0);
-      elements_[i]->measure(current, out, tmp_bounds);
+      bounds.extend(elements_[i]->measure(current, out));
       current = out;
-      bounds.extend(tmp_bounds);
     }
     return bounds;
   }
 
   void draw_at(Document& doc, const Pose& start)
   {
-    Pose current = start;
     for (int i = 0; i < elements_.size(); i++)
     {
-      Pose out(0,0,0);
-      elements_[i]->draw_at(doc, current, out);
-      current = out;
+      elements_[i]->draw(doc, Point(start.x_, start.y_));
     }
   }
 };
