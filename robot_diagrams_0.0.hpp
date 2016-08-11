@@ -142,12 +142,14 @@ public:
   }
   virtual void draw(Document& doc, const Point& offset)
   {
-    doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Red));
-    doc << Line(points_[1] + offset, points_[2] + offset, Stroke(0.5, Color::Red));
-    doc << Line(points_[1] + offset, points_[3] + offset, Stroke(0.5, Color::Red));
-    doc << Line(points_[0] + offset, points_[4] + offset, Stroke(0.5, Color::Blue));
-    doc << Line(points_[4] + offset, points_[5] + offset, Stroke(0.5, Color::Blue));
-    doc << Line(points_[4] + offset, points_[6] + offset, Stroke(0.5, Color::Blue));
+    Stroke s_r(1.35, Color::Red);
+    Stroke s_b(1.35, Color::Blue);
+    doc << Line(points_[0] + offset, points_[1] + offset, s_r);
+    doc << Line(points_[1] + offset, points_[2] + offset, s_r);
+    doc << Line(points_[1] + offset, points_[3] + offset, s_r);
+    doc << Line(points_[0] + offset, points_[4] + offset, s_b);
+    doc << Line(points_[4] + offset, points_[5] + offset, s_b);
+    doc << Line(points_[4] + offset, points_[6] + offset, s_b);
   }
   double frame_scale_;
   double arrow_len_;
