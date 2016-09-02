@@ -130,6 +130,42 @@ bool add_element(rob_diag::Robot& robot, std::string line)
       std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
       return false;
     }
+    else if (words[0] == "vector")
+    {
+      if (words.size() == 2)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        rob_diag::RobotElement* vec = (rob_diag::RobotElement*)new rob_diag::Vector(length);
+        robot.elements_.push_back(vec);
+        return true;
+      }
+      else if (words.size() == 3)
+      {
+        double length = std::strtod (words[1].c_str(), NULL);
+        rob_diag::RobotElement* vec = (rob_diag::RobotElement*)new rob_diag::Vector(length, words[2]);
+        robot.elements_.push_back(vec);
+        return true;
+      }
+      std::cerr << "Invalid arguments for " << words[0] << std::endl;
+      return false;
+    }
+    else if (words[0] == "point")
+    {
+      if (words.size() == 1)
+      {
+        rob_diag::RobotElement* pt = (rob_diag::RobotElement*)new rob_diag::RobPoint();
+        robot.elements_.push_back(pt);
+        return true;
+      }
+      else if (words.size() == 2)
+      {
+        rob_diag::RobotElement* pt = (rob_diag::RobotElement*)new rob_diag::RobPoint(2, words[1]);
+        robot.elements_.push_back(pt);
+        return true;
+      }
+      std::cerr << "Invalid arguments for " << words[0] << std::endl;
+      return false;
+    }
     else
     {
       std::cerr << words[0] << " not recognized!" << std::endl;

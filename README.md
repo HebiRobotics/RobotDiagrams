@@ -32,6 +32,18 @@ Frames - x/y axis
 frames
 ```
 
+Vector
+```
+vector <length>
+vector <length> <label>
+```
+
+Point
+```
+point
+point <label>
+```
+
 Rotary Joint
 ```
 rjoint <theta>

@@ -10,7 +10,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-using namespace svg;
+using namespace svg; // TODO: remove me!
 
 namespace rob_diag
 {
@@ -82,36 +82,68 @@ protected:
 // draw?
 // TODO: debug by drawing bounds? And rotating things?
 
-class Link : public RobotElement
+class Vector : public RobotElement
 {
 public:
-  Link(double length, std::string label = "")
-    : length_(length), label_(label), visible_(true)
+  Vector(double length, std::string label = "")
+    : length_(length), arrow_len_(4), label_(label)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
-    // Note: the points for Link are { start, end }
+    // Note: the points for Link are { start, end, arrowhead end 1,
+    // arrowhead end 2 }
     points_.clear();
     end = start;
-    end.x_ = start.x_ + std::cos(end.theta_) * length_;
-    end.y_ = start.y_ + std::sin(end.theta_) * length_;
+    double c = std::cos(end.theta_);
+    double s = std::sin(end.theta_);
+    end.x_ = start.x_ + c * length_;
+    end.y_ = start.y_ + s * length_;
     points_.push_back(Point(start.x_, start.y_));
     points_.push_back(Point(end.x_, end.y_));
+    points_.push_back(Point(end.x_ - c * arrow_len_ + s * arrow_len_, end.y_ - s * arrow_len_ - c * arrow_len_ ));
+    points_.push_back(Point(end.x_ - c * arrow_len_ - s * arrow_len_, end.y_ - s * arrow_len_ + c * arrow_len_ ));
     return point_bounds();
   }
   virtual void draw(Document& doc, const Point& offset)
   {
-    if (visible_)
-      doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Black));
+    doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Black));
+    doc << Line(points_[1] + offset, points_[2] + offset, Stroke(0.5, Color::Black));
+    doc << Line(points_[1] + offset, points_[3] + offset, Stroke(0.5, Color::Black));
     if (label_.size() > 0)
       doc << Text(points_[0] * 0.5 + points_[1] * 0.5, label_, Fill(Color::Black));
   }
-  virtual ~Link() {};
+  virtual ~Vector() {};
   double length_;
+  double arrow_len_;
   std::string label_;
-  bool visible_;
 };
-// TODO: add label!
+
+// TODO: change this to 'point', and don't pull in svg namespace!
+class RobPoint : public RobotElement
+{
+public:
+  RobPoint(double radius = 2, std::string label = "")
+    : radius_(radius), label_(label)
+  {}
+  virtual Rect measure(const Pose& start, Pose& end)
+  {
+    // Note: the points for Point are { center }
+    end = start;
+    points_.push_back(Point(start.x_, start.y_));
+    return Rect(start.x_ - radius_, start.y_ + radius_,
+                start.x_ + radius_, start.y_ - radius_);
+  }
+  virtual void draw(Document& doc, const Point& offset)
+  {
+    doc << Circle(points_[0] + offset, radius_ * 2, Fill(Color::Black));
+    if (label_.size() > 0)
+      doc << Text(points_[0], label_, Fill(Color::Black));
+  }
+  virtual ~RobPoint() {};
+  double radius_;
+  std::string label_;
+};
+
 
 class Frames : public RobotElement
 {
@@ -155,10 +187,42 @@ public:
   double arrow_len_;
 };
 
+class Link : public RobotElement
+{
+public:
+  Link(double length, std::string label = "")
+    : length_(length), label_(label), visible_(true)
+  {}
+  virtual Rect measure(const Pose& start, Pose& end)
+  {
+    // Note: the points for Link are { start, end }
+    points_.clear();
+    end = start;
+    end.x_ = start.x_ + std::cos(end.theta_) * length_;
+    end.y_ = start.y_ + std::sin(end.theta_) * length_;
+    points_.push_back(Point(start.x_, start.y_));
+    points_.push_back(Point(end.x_, end.y_));
+    return point_bounds();
+  }
+  virtual void draw(Document& doc, const Point& offset)
+  {
+    if (visible_)
+      doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Black));
+    if (label_.size() > 0)
+      doc << Text(points_[0] * 0.5 + points_[1] * 0.5, label_, Fill(Color::Black));
+  }
+  virtual ~Link() {};
+  double length_;
+  std::string label_;
+  bool visible_;
+};
+// TODO: add label!
+
+
 class RJoint : public RobotElement
 {
 public:
-  RJoint(double default_theta = 0, double radius = 5)
+  RJoint(double default_theta = 0, double radius = 4)
     : radius_(radius), default_theta_(default_theta), visible_(true)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
@@ -183,12 +247,12 @@ public:
 // (x to the right, y up, origin halfway between pts. 1 and 2)
 //
 // 1_______0
-//  |
-//  |  4------5
-// 2|______3
+//         |
+// 4----5  |
+// 2_______|3
 //
 // width is distance from 1 to 2.
-// length is distance from 5 to midpoint of edge 1-2.
+// length is distance from midpoint of 0-3 to 4.
 class PJoint : public RobotElement
 {
 public:
@@ -206,21 +270,21 @@ public:
     double w_y = -std::cos(end.theta_) * width_ * 0.5;
     end.x_ = start.x_ + l_x;
     end.y_ = start.y_ + l_y;
-    points_.push_back(Point(start.x_ - w_x + l_x * 2.0 / 3.0, start.y_ - w_y + l_y * 2.0 / 3.0));
+    points_.push_back(Point(start.x_ - w_x + l_x, start.y_ - w_y + l_y));
     points_.push_back(Point(start.x_ - w_x, start.y_ - w_y));
     points_.push_back(Point(start.x_ + w_x, start.y_ + w_y));
-    points_.push_back(Point(start.x_ + w_x + l_x * 2.0 / 3.0, start.y_ + w_y + l_y * 2.0 / 3.0));
-    points_.push_back(Point(start.x_ + l_x / 3.0, start.y_ + l_y / 3.0));
-    points_.push_back(Point(end.x_, end.y_));
+    points_.push_back(Point(start.x_ + w_x + l_x, start.y_ + w_y + l_y));
+    points_.push_back(Point(start.x_, start.y_));
+    points_.push_back(Point(start.x_, start.y_) * (1.0 / 3.0) + Point(end.x_, end.y_) * (2.0 / 3.0));
     return point_bounds();
   }
   virtual void draw(Document& doc, const Point& offset)
   {
     Stroke s(0.5, Color::Black);
     doc << Line(points_[0] + offset, points_[1] + offset, s)
-        << Line(points_[1] + offset, points_[2] + offset, s)
         << Line(points_[2] + offset, points_[3] + offset, s)
-        << Line(points_[4] + offset, points_[5] + offset, s);
+        << Line(points_[4] + offset, points_[5] + offset, s)
+        << Line(points_[0] + offset, points_[3] + offset, s);
   }
   virtual ~PJoint() {};
   double width_, length_;
@@ -234,28 +298,39 @@ public:
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
-    // Start/end at same point:
+    // Start/end at same point...almost.  Set 'end' at end :)
     end = start;
     end.theta_ += default_theta_;
 
+    //    |
+    //  -----
+    //   \\\\
+    //
     // Points: { left of ground, right of ground, bottom left of "fixed" lines,
-    // end of "fixed" lines }
+    // end of "fixed" lines, center, top }
     points_.clear();
     double theta = start.theta_ + default_theta_;
     double w_x = std::cos(theta) * width_ * 0.5;
     double w_y = std::sin(theta) * width_ * 0.5;
-    double h_x = std::sin(theta) * width_ * 0.25;
-    double h_y = -std::cos(theta) * width_ * 0.25;
+    double h_x = std::sin(theta) * width_ * 0.3;
+    double h_y = -std::cos(theta) * width_ * 0.3;
     double left = std::min(-w_x, h_x);
     double right = std::max(w_x, h_x);
     double top = std::max(w_y, h_y);
     double bottom = std::min(-w_y, h_y);
+
+    end.x_ -= h_x;
+    end.y_ -= h_y;
+
     // Horizontal "ground"
     points_.push_back(Point(start.x_ - w_x, start.y_ - w_y));
     points_.push_back(Point(start.x_ + w_x, start.y_ + w_y));
     // Slanted "fixed" lines
     points_.push_back(Point(start.x_ - w_x + h_x, start.y_ - w_y + h_y));
     points_.push_back(Point(start.x_ + w_x + h_x, start.y_ + w_y + h_y));
+    // Small "pole"/base link
+    points_.push_back(Point(start.x_, start.y_));
+    points_.push_back(Point(start.x_ - h_x, start.y_ - h_y));
 
     // Compute bounds
     return point_bounds();
@@ -280,6 +355,8 @@ public:
         points_[2] * frac_bot + points_[3] * (1 - frac_bot) + offset,
         s);
     }
+    // Small pole/base link
+    doc << Line(points_[4] + offset, points_[5] + offset, s);
   }
   virtual ~Base() {};
   double width_, default_theta_;
