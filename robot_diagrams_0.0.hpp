@@ -86,7 +86,7 @@ class Vector : public RobotElement
 {
 public:
   Vector(double length, std::string label = "")
-    : length_(length), arrow_len_(4), label_(label)
+    : length_(length), arrow_len_(4), text_x_offset_(0), text_y_offset_(-15), label_(label)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
@@ -110,11 +110,13 @@ public:
     doc << Line(points_[1] + offset, points_[2] + offset, Stroke(0.5, Color::Black));
     doc << Line(points_[1] + offset, points_[3] + offset, Stroke(0.5, Color::Black));
     if (label_.size() > 0)
-      doc << Text(points_[0] * 0.5 + points_[1] * 0.5, label_, Fill(Color::Black));
+      doc << Text(points_[0] * 0.5 + points_[1] * 0.5 + offset + Point(text_x_offset_, text_y_offset_), label_, Fill(Color::Black));
   }
   virtual ~Vector() {};
   double length_;
   double arrow_len_;
+  double text_x_offset_;
+  double text_y_offset_;
   std::string label_;
 };
 
@@ -123,7 +125,7 @@ class RobPoint : public RobotElement
 {
 public:
   RobPoint(double radius = 2, std::string label = "")
-    : radius_(radius), label_(label)
+    : radius_(radius), text_x_offset_(0), text_y_offset_(-15), label_(label)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
@@ -137,10 +139,12 @@ public:
   {
     doc << Circle(points_[0] + offset, radius_ * 2, Fill(Color::Black));
     if (label_.size() > 0)
-      doc << Text(points_[0], label_, Fill(Color::Black));
+      doc << Text(points_[0] + offset + Point(text_x_offset_, text_y_offset_), label_, Fill(Color::Black));
   }
   virtual ~RobPoint() {};
   double radius_;
+  double text_x_offset_;
+  double text_y_offset_;
   std::string label_;
 };
 
@@ -191,7 +195,7 @@ class Link : public RobotElement
 {
 public:
   Link(double length, std::string label = "")
-    : length_(length), label_(label), visible_(true)
+    : length_(length), text_x_offset_(0), text_y_offset_(-15), label_(label), visible_(true)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
@@ -209,10 +213,12 @@ public:
     if (visible_)
       doc << Line(points_[0] + offset, points_[1] + offset, Stroke(0.5, Color::Black));
     if (label_.size() > 0)
-      doc << Text(points_[0] * 0.5 + points_[1] * 0.5, label_, Fill(Color::Black));
+      doc << Text(points_[0] * 0.5 + points_[1] * 0.5 + offset + Point(text_x_offset_, text_y_offset_), label_, Fill(Color::Black));
   }
   virtual ~Link() {};
   double length_;
+  double text_x_offset_;
+  double text_y_offset_;
   std::string label_;
   bool visible_;
 };
