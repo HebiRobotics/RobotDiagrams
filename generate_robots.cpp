@@ -50,7 +50,7 @@ bool add_element(rob_diag::Robot& robot, std::string line)
       std::cerr << "Invalid arguments for " << words[0] << std::endl;
       return false;
     }
-    else if (words[0] == "link" || words[0] == "vector") // TODO: remove me! hack to workaround gmail blocking an attachment!
+    else if (words[0] == "link")
     {
       if (words.size() == 2)
       {
@@ -92,17 +92,6 @@ bool add_element(rob_diag::Robot& robot, std::string line)
         return true;
       }
       std::cerr << "Invalid (or not yet supported) arguments for " << words[0] << std::endl;
-      return false;
-    }
-    else if (words[0] == "point") // NOTE: this is a hack to work around missed gmail attachment!
-    {
-      if (words.size() == 1 || words.size() == 2)
-      {
-        rob_diag::RobotElement* rjoint = (rob_diag::RobotElement*)new rob_diag::RJoint(0);
-        robot.elements_.push_back(rjoint);
-        return true;
-      }
-      std::cerr << "Invalid arguments for " << words[0] << std::endl;
       return false;
     }
     else if (words[0] == "rjoint" || words[0] == "invisible_rjoint")
