@@ -236,6 +236,8 @@ public:
     // Note: the points for RJoint are { center }
     end = start;
     end.theta_ += default_theta_;
+    start_theta_ = start.theta_;
+    end_theta_ = end.theta_;
     points_.push_back(Point(start.x_, start.y_));
     return Rect(start.x_ - radius_, start.y_ + radius_,
                 start.x_ + radius_, start.y_ - radius_);
@@ -243,10 +245,14 @@ public:
   virtual void draw(Document& doc, const Point& offset)
   {
     if (visible_)
+    {
       doc << Circle(points_[0] + offset, radius_ * 2, Fill(Color::Transparent), Stroke(0.5, Color::Black));
+//      doc << Arc(points_[0] + offset, start_theta_, end_theta_, 2 * radius_, Stroke(0.5, Color::Black));
+    }
   }
   virtual ~RJoint() {};
   double radius_, default_theta_;
+  double start_theta_, end_theta_;
   bool visible_;
 };
 

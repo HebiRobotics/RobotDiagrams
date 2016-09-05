@@ -30,9 +30,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
 /**
- * Note regarding modifications:
+ * Note regarding modifications by mtesch:
  * - changed 'transparent' to 'none' to work better with SVG viewers.
  * - added '+=' and '*=' to simple Point class
+ * - added a 'arc' command.
  **/
 
 #ifndef SIMPLE_SVG_HPP
@@ -341,6 +342,52 @@ namespace svg
         }
     private:
         Point center;
+        double radius;
+    };
+
+    // Circular arc: Center point, start angle, end angle. Angles in radians.
+    class Arc : public Shape
+    {
+    public:
+        Arc(Point const & center, double start_angle, double end_angle, double radius,
+            Stroke const & stroke = Stroke())
+            : Shape(Fill(), stroke), center(center), start_angle(start_angle),
+              end_angle(end_angle), radius(radius) { }
+        std::string toString(Layout const & layout) const
+        {
+        //<path d="M275,175 v-150 a150,150 0 0,0 -150,150 z"
+        //        fill="yellow" stroke="blue" stroke-width="5" />
+            std::stringstream path;
+            // Calculate start and end points:
+            double scale_radius = translateScale(radius, layout);
+            Point arc_start(center.x + scale_radius * cos(start_angle),
+                            center.y + scale_radius * sin(start_angle));
+            Point arc_end(center.x + scale_radius * cos(end_angle),
+                          center.y + scale_radius * sin(end_angle));
+            bool large_angle = (end_angle - start_angle) > M_PI;
+            bool sweep = (end_angle - start_angle) > 0;
+            path << "M" << translateX(arc_start.x, layout) << "," <<
+                           translateY(arc_start.y, layout) << " " <<
+                           "A" << scale_radius << "," << scale_radius << " 0 " <<
+                           (large_angle ? "1" : "0") << "," <<
+                           (sweep ? "0" : "1") << " " <<
+                           translateX(arc_end.x, layout) << "," <<
+                           translateY(arc_end.y, layout);
+            // Entire element
+            std::stringstream ss;
+            ss << elemStart("path") << attribute("d", path.str())
+                << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
+            return ss.str();
+        }
+        void offset(Point const & offset)
+        {
+            center.x += offset.x;
+            center.y += offset.y;
+        }
+    private:
+        Point center;
+        double start_angle;
+        double end_angle;
         double radius;
     };
 
