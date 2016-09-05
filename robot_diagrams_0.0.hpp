@@ -228,30 +228,39 @@ public:
 class RJoint : public RobotElement
 {
 public:
-  RJoint(double default_theta = 0, double radius = 4)
-    : radius_(radius), default_theta_(default_theta), visible_(true)
+  RJoint(double default_theta = 0, double radius = 4, std::string label = "")
+    : radius_(radius), default_theta_(default_theta),
+      label_(label), text_x_offset_(0), text_y_offset_(0),
+      visible_(true)
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
-    // Note: the points for RJoint are { center }
+    // Note: the points for RJoint are { center, middle of text arc }
     end = start;
     end.theta_ += default_theta_;
     start_theta_ = start.theta_;
     end_theta_ = end.theta_;
+    double mid_theta = (start_theta_ + end_theta_) * 0.5;
     points_.push_back(Point(start.x_, start.y_));
+    points_.push_back(Point(start.x_ + radius_ * 2 * cos(mid_theta),
+                            start.y_ + radius_ * 2 * sin(mid_theta)));
     return Rect(start.x_ - radius_, start.y_ + radius_,
                 start.x_ + radius_, start.y_ - radius_);
   }
   virtual void draw(Document& doc, const Point& offset)
   {
     if (visible_)
-    {
       doc << Circle(points_[0] + offset, radius_ * 2, Fill(Color::Transparent), Stroke(0.5, Color::Black));
-//      doc << Arc(points_[0] + offset, start_theta_, end_theta_, 2 * radius_, Stroke(0.5, Color::Black));
+    if (label_.size() > 0)
+    {
+      doc << Arc(points_[0] + offset, start_theta_, end_theta_, 2 * radius_, Stroke(0.5, Color::Black));
+      doc << Text(points_[1] + offset + Point(text_x_offset_, text_y_offset_), label_, Fill(Color::Black));
     }
   }
   virtual ~RJoint() {};
   double radius_, default_theta_;
+  std::string label_;
+  double text_x_offset_, text_y_offset_;
   double start_theta_, end_theta_;
   bool visible_;
 };

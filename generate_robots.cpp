@@ -105,6 +105,15 @@ bool add_element(rob_diag::Robot& robot, std::string line)
         robot.elements_.push_back(rjoint);
         return true;
       }
+      if (words.size() == 3)
+      {
+        double theta = std::strtod (words[1].c_str(), NULL);
+        rob_diag::RobotElement* rjoint = (rob_diag::RobotElement*)new rob_diag::RJoint(theta, 4, words[2]);
+        if (words[0] == "invisible_rjoint")
+          ((rob_diag::RJoint*)rjoint)->visible_ = false;
+        robot.elements_.push_back(rjoint);
+        return true;
+      }
       std::cerr << "Invalid arguments for " << words[0] << std::endl;
       return false;
     }
