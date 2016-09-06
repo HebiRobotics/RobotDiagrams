@@ -90,7 +90,7 @@ public:
   {}
   virtual Rect measure(const Pose& start, Pose& end)
   {
-    // Note: the points for Link are { start, end, arrowhead end 1,
+    // Note: the points for Vector are { start, end, arrowhead end 1,
     // arrowhead end 2 }
     points_.clear();
     end = start;

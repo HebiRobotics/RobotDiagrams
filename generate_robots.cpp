@@ -59,10 +59,15 @@ bool add_element(rob_diag::Robot& robot, std::string line)
         robot.elements_.push_back(link);
         return true;
       }
-      else if (words.size() == 3)
+      else if (words.size() == 3 || words.size() == 5)
       {
         double length = std::strtod (words[1].c_str(), NULL);
         rob_diag::RobotElement* link = (rob_diag::RobotElement*)new rob_diag::Link(length, words[2]);
+        if (words.size() == 5)
+        {
+          ((rob_diag::Link*)link)->text_x_offset_ = std::strtod(words[3].c_str(), NULL);
+          ((rob_diag::Link*)link)->text_y_offset_ = std::strtod(words[4].c_str(), NULL);
+        }
         robot.elements_.push_back(link);
         return true;
       }
@@ -105,12 +110,17 @@ bool add_element(rob_diag::Robot& robot, std::string line)
         robot.elements_.push_back(rjoint);
         return true;
       }
-      if (words.size() == 3)
+      if (words.size() == 3 || words.size() == 5)
       {
         double theta = std::strtod (words[1].c_str(), NULL);
         rob_diag::RobotElement* rjoint = (rob_diag::RobotElement*)new rob_diag::RJoint(theta, 4, words[2]);
         if (words[0] == "invisible_rjoint")
           ((rob_diag::RJoint*)rjoint)->visible_ = false;
+        if (words.size() == 5)
+        {
+          ((rob_diag::RJoint*)rjoint)->text_x_offset_ = std::strtod(words[3].c_str(), NULL);
+          ((rob_diag::RJoint*)rjoint)->text_y_offset_ = std::strtod(words[4].c_str(), NULL);
+        }
         robot.elements_.push_back(rjoint);
         return true;
       }
@@ -148,10 +158,15 @@ bool add_element(rob_diag::Robot& robot, std::string line)
         robot.elements_.push_back(vec);
         return true;
       }
-      else if (words.size() == 3)
+      else if (words.size() == 3 || words.size() == 5)
       {
         double length = std::strtod (words[1].c_str(), NULL);
         rob_diag::RobotElement* vec = (rob_diag::RobotElement*)new rob_diag::Vector(length, words[2]);
+        if (words.size() == 5)
+        {
+          ((rob_diag::Vector*)vec)->text_x_offset_ = std::strtod(words[3].c_str(), NULL);
+          ((rob_diag::Vector*)vec)->text_y_offset_ = std::strtod(words[4].c_str(), NULL);
+        }
         robot.elements_.push_back(vec);
         return true;
       }
